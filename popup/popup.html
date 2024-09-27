@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="styles/index.css">
+    <title>Skorozvonium</title>
+</head>
+<body>
+<div class="part statistic">
+    <div class="header">
+        <h2 class="header__text">Статистика</h2>
+        <nav class="multi-switch">
+            <a class="multi-switch__button">День</a>
+            <a class="multi-switch__button">Неделя</a>
+            <a class="multi-switch__button">Месяц</a>
+            <div class="multi-switch__selector"></div>
+        </nav>
+    </div>
+
+    <div class="stat">
+        <div id="dialog-per-hour-counter" class="stat__counter odometer">0</div>
+        <p class="stat__title">диалогов/час</p>
+    </div>
+    <div class="stat">
+        <p id="dialog-counter" class="stat__counter odometer">0</p>
+        <div class="stat__title">диалогов</div>
+    </div>
+    <div class="stat">
+        <p id="leads-counter" class="stat__counter odometer">0</p>
+        <div class="stat__title">лидов</div>
+    </div>
+    <div class="stat">
+        <p id="work-hours" class="stat__counter odometer">0</p>
+        <div class="stat__title">часов работы</div>
+    </div>
+    <!--    <div class="statistic__item stat">-->
+    <!--        <p class="stat__counter">1500₽</p>-->
+    <!--        <p class="stat__title">~ доход за сегодня</p>-->
+    <!--    </div>-->
+</div>
+
+<div class="part settings">
+    <div class="header">
+        <h2 class="header__text">Настройки</h2>
+    </div>
+    <div class="switch-block-stack">
+        <div class="switch-block">
+            <label class="switch">
+                <input type="checkbox" name="switch" data-setting="hide-script-header">
+            </label>
+            <p class="switch-block__text">Скрыть шапку таблицы скрипта</p>
+        </div>
+        <div class="switch-block">
+            <label class="switch">
+                <input type="checkbox" name="switch" data-setting="auto-recall">
+            </label>
+            <p class="switch-block__text">Перезванивать сбросы до 3-ех секунд</p>
+        </div>
+    </div>
+</div>
+
+<script src="scripts/odometer.js"></script>
+<script src="scripts/popup.js" type="module"></script>
+<script src="scripts/switch.js" type="module"></script>
+<script src="scripts/multi-switch.js" type="module"></script>
+</body>
+</html>

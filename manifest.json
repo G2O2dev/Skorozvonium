@@ -1,0 +1,33 @@
+{
+    "manifest_version": 3,
+    "name": "Skorozvonium",
+    "description": "Упрощает работу со скорозвоном, улучшает интерфейс и добавляет полезные функции",
+    "version": "0.2.0",
+    "icons": {
+        "128": "logo-128.png"
+    },
+    "action": {
+        "default_title": "Skorozvonium",
+        "default_popup": "popup/popup.html"
+    },
+    "permissions": [
+        "webRequest"
+    ],
+    "content_scripts": [
+        {
+            "all_frames": true,
+            "run_at": "document_start",
+            "matches": ["https://app.skorozvon.ru/*"],
+            "match_about_blank": true,
+            "css": ["inject/inject.css"],
+            "js": ["inject/content.js"]
+        }
+    ],
+    "host_permissions": [
+        "*://*.skorozvon.ru/*"
+    ],
+    "background": {
+        "service_worker": "background/background.js",
+        "type": "module"
+    }
+}
