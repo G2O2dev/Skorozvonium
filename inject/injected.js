@@ -1,3 +1,26 @@
+function listenTube() {
+    setTimeout(() => {
+        try {
+            Tube.Phone.on("call:ended", (e) => {
+                window.dispatchEvent(new CustomEvent("call:ended", {
+                    detail: {
+                        duration: e.session.audioRemote.currentTime,
+                        in: e.attributes.direction === "in",
+                    }
+                }));
+                console.log("State end handled from injected", e)
+            });
+        } catch {
+            listenTube();
+        }
+    }, 200)
+}
+
+listenTube();
+
+
+//TODO: Получать скрипт через перехват запросов
+
 // (function() {
 //     const originalXhrSend = XMLHttpRequest.prototype.send;
 //

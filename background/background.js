@@ -140,11 +140,6 @@ async function handleStatsRequest(timestamp, sendResponse) {
 }
 
 
-let lastContentPort;
-chrome.runtime.onConnect.addListener((port) => {
-    lastContentPort = port;
-    console.log("Port connected", lastContentPort);
-});
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     switch (request.action) {
         case "get-stats":
@@ -172,14 +167,9 @@ chrome.webRequest.onBeforeRequest.addListener(async req => {
         if (req.url.includes("/user_states/") && req.method === "PUT") {
             let postedString = decodeURIComponent(String.fromCharCode.apply(null, new Uint8Array(req.requestBody.raw[0].bytes)));
             await db.pushWorkStatus(JSON.parse(postedString)["status"], Number(new Date()))
-        } else if (lastContentPort && req.url.includes("/stop") && req.method === "POST" && await db.getSetting("auto-recall")) {
-            console.log("call end");
-            lastContentPort.postMessage({message: "call-end"});
         } else if (req.url.includes("/calls/") && req.method === "PUT") {
             let str = decodeURIComponent(String.fromCharCode.apply(null, new Uint8Array(req.requestBody.raw[0].bytes)));
             const result = JSON.parse(str)["result"];
-            if(!result)
-                return;
 
             if ([492976, 492973, 492978].includes(result))
                 await db.pushDialog(false);

@@ -140,46 +140,18 @@ function handleHotClick(resultButton, hotBtns, resultList, deployPlace) {
 
 //#endregion
 
-//#region Auto Recall
-
-function onCallEnd() {
-    console.log("checking for recall")
-
-    const callCard = document.getElementById("call-card");
-    if (callCard.classList.contains("auto-recall-disabled"))
-        return;
-
-    const substate = document.getElementsByClassName("call-substate")[0];
-    const duration = substate.getElementsByClassName("duration")[0]?.innerHTML;
-    if (duration == null) {
-        console.log("need recall" + duration);
-        waitAndClickCallBtn();
-    } else {
-        console.log("need recall" + duration);
-        let match = /^(?:([0-9]*):)?([0-9]*)$/.exec(duration);
-        const min = parseInt(match[1], 10) || 0;
-        const sec = parseInt(match[2], 10) || 0;
-
-        if (min <= 0 && sec <= 3) {
-            waitAndClickCallBtn();
-        }
-    }
-}
-
-function waitAndClickCallBtn(iteration = 0) {
-    if (iteration < 7) {
+function clickCallBtn(iteration = 0) {
+    if (iteration < 6) {
         setTimeout(() => {
             let callBtn = document.getElementById("call_button");
             if (!callBtn.classList.contains("button__primary")) {
-                waitAndClickCallBtn(iteration++);
+                clickCallBtn(iteration++);
             } else {
                 callBtn.click();
             }
         }, 40)
     }
 }
-
-//#endregion
 
 
 let btnsNeedReplace = true;
@@ -190,27 +162,20 @@ new MutationObserver(async () => {
     }
 
     const scenarioResults = document.getElementsByClassName("scenario-results");
-
     if (scenarioResults.length === 0) {
         btnsNeedReplace = true;
     } else if (btnsNeedReplace) {
         btnsNeedReplace = false;
         await replaceBtns();
     }
-
-    const callBtn = document.getElementById("call_button");
-    const callCard = document.getElementById("call-card");
-
-    if (callBtn && !callCard.classList.contains("call-ended-manually")) {
-        callBtn.addEventListener("click", () => callCard.classList.add("auto-recall-disabled"));
-    }
 }).observe(document, {childList: true, subtree: true});
-chrome.runtime.connect().onMessage.addListener((msg) => {
-    switch (msg.message) {
-        case "call-end":
-            onCallEnd();
-            break;
-        default:
-            console.warn('Unknown payload:', msg.message);
-    }
-});
+
+window.addEventListener("call:ended", (e) => {
+    console.log(e.detail)
+
+    chrome.runtime.sendMessage({action: "get-setting", settingName: "auto-recall"}).then(autoRecall => {
+        if (autoRecall && e.detail.in && e.detail.duration < 3) {
+            document.getElementById("call_button").click();
+        }
+    });
+})
