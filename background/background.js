@@ -28,13 +28,10 @@ class Database {
         return this.db;
     }
 
-    async pushDialog(dialog) {
+    async pushDialog(isLead) {
         try {
-            const db = await this.open();
-            const tx = db.transaction('dialogs', 'readwrite');
-            const store = tx.objectStore('dialogs');
-            await store.add(dialog);
-            await tx.done;
+            let store = await (await this.open()).transaction('dialogs', 'readwrite').store;
+            await store.add({id: Date.now(), isLead: isLead});
         } catch (error) {
             console.error('Failed to add dialog:', error);
         }
@@ -78,7 +75,7 @@ class Database {
     }
 
     async getNormalHours(since) {
-        let timeline = await database.getWorkStatusesSince(since);
+        let timeline = await db.getWorkStatusesSince(since);
         let timeOfWork = 0;
 
         let lastNormalStart = null;
@@ -122,17 +119,14 @@ class Database {
     }
 }
 
-const database = new Database();
+const db = new Database();
 
 async function handleStatsRequest(timestamp, sendResponse) {
-    //const oneHourAgo = Date.now() - 60 * 60 * 1000;
-
     try {
-        const dialogs = await database.getDialogsSince(timestamp);
-        //const dialogCountLastHour = await database.countDialogsSince(oneHourAgo);
+        const dialogs = await db.getDialogsSince(timestamp);
         const leadCount = dialogs.filter(dialog => dialog.isLead).length;
 
-        const normalHours = await database.getNormalHours(timestamp);
+        const normalHours = await db.getNormalHours(timestamp);
 
         sendResponse({
             dialogPerHour: Math.floor(dialogs.length / (normalHours < 1 ? 1 : normalHours)),
@@ -145,20 +139,11 @@ async function handleStatsRequest(timestamp, sendResponse) {
     }
 }
 
-async function handleAddDialog(isLead) {
-    try {
-        const dialog = {id: Date.now(), isLead};
-        await database.pushDialog(dialog);
-    } catch (error) {
-        console.error('Error adding dialog:', error);
-    }
-}
 
-
-
-let contentPorts = [];
+let lastContentPort;
 chrome.runtime.onConnect.addListener((port) => {
-    contentPorts.push(port);
+    lastContentPort = port;
+    console.log("Port connected", lastContentPort);
 });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     switch (request.action) {
@@ -166,10 +151,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             handleStatsRequest(request.timestamp, sendResponse);
             return true;
         case "get-setting":
-            database.getSetting(request.settingName).then(sendResponse);
+            db.getSetting(request.settingName).then(sendResponse);
             return true;
         case "set-setting":
-            database.setSetting(request.settingName, request.value);
+            db.setSetting(request.settingName, request.value);
             break;
         case "add-dialog":
             handleAddDialog(false);
@@ -181,32 +166,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.warn('Unknown action:', request.action);
     }
 });
+
 chrome.webRequest.onBeforeRequest.addListener(async req => {
-    if (req.url.includes("/user_states/") && req.method === "PUT") {
-        var postedString = decodeURIComponent(String.fromCharCode.apply(null, new Uint8Array(req.requestBody.raw[0].bytes)));
-        database.pushWorkStatus(JSON.parse(postedString)["status"], Number(new Date()))
-    } else if (req.url.includes("/stop") && req.method === "POST" && await database.getSetting("auto-recall")) {
-        console.log("call end")
-        for (let i = 0; i < contentPorts.length; i++) {
-            try {
-                contentPorts[i].postMessage({message: "call-end"});
-            } catch {
+    try {
+        if (req.url.includes("/user_states/") && req.method === "PUT") {
+            let postedString = decodeURIComponent(String.fromCharCode.apply(null, new Uint8Array(req.requestBody.raw[0].bytes)));
+            await db.pushWorkStatus(JSON.parse(postedString)["status"], Number(new Date()))
+        } else if (lastContentPort && req.url.includes("/stop") && req.method === "POST" && await db.getSetting("auto-recall")) {
+            console.log("call end");
+            lastContentPort.postMessage({message: "call-end"});
+        } else if (req.url.includes("/calls/") && req.method === "PUT") {
+            let str = decodeURIComponent(String.fromCharCode.apply(null, new Uint8Array(req.requestBody.raw[0].bytes)));
+            const result = JSON.parse(str)["result"];
+            if(!result)
+                return;
+
+            if ([492976, 492973, 492978].includes(result))
+                await db.pushDialog(false);
+            else if (492968 === result){
+                await db.pushDialog(true);
             }
         }
+    } catch (error) {
+        console.error('Error in beforeRequest:', error);
     }
 }, {urls: ['<all_urls>']}, ['requestBody']);
-
-
-// chrome.webRequest.onCompleted.addListener(function(details){
-//         console.log(details.responseBody);
-// },  { urls: ['<all_urls>'] }, ['responseHeaders', 'extraHeaders']);
-
-// chrome.debugger.attach({ tabId: tab.id }, "1.3", () => { /* Attached */ });
-//
-// chrome.debugger.sendCommand({ tabId: tab.id }, "Network.enable", {});
-//
-// chrome.debugger.onEvent.addListener((source, method, params) => {
-//     if (method === "Network.requestWillBeSent") {
-//         console.log('Тело запроса:', params.request.postData);  // Здесь будет тело POST-запроса
-//     }
-// });

@@ -67,17 +67,17 @@ function createHotBtns(commentArea, words) {
     words.forEach(word => {
         const item = document.createElement("div");
         item.innerHTML = word;
-        item.onclick = () => handleHotButtonClick(commentArea, word);
+        item.onclick = () => handleHotBtnClick(commentArea, word);
         wrapper.appendChild(item);
     });
 
-    const backButton = createBackButton(wrapper);
+    const backButton = createBackBtn(wrapper);
     wrapper.appendChild(backButton);
 
     return wrapper;
 }
 
-function createBackButton(wrapper) {
+function createBackBtn(wrapper) {
     const backButton = document.createElement("div");
     backButton.innerHTML = "Назад";
     backButton.style.order = "-2";
@@ -92,7 +92,7 @@ function createBackButton(wrapper) {
     return backButton;
 }
 
-function handleHotButtonClick(commentArea, word) {
+function handleHotBtnClick(commentArea, word) {
     const callBtn = document.getElementById("call_button");
     const saveBtn = document.getElementsByClassName("save-and-next")[0];
 
@@ -106,7 +106,7 @@ function handleHotButtonClick(commentArea, word) {
     setTimeout(() => saveBtn.click(), 50);
 }
 
-function replaceButtons() {
+function replaceBtns() {
     try {
         const resultList = document.querySelector(".result-list");
         const results = resultList.querySelectorAll(".result-item");
@@ -116,14 +116,14 @@ function replaceButtons() {
         let noContactBtns = createHotBtns(commentArea, ["Автоответчик", "Сброс", "Молчит", "Тишина"]);
         let declineBtns = createHotBtns(commentArea, ["Не актуально", "Сброс", "Негатив"]);
 
-        setupResultButtonHandlers(results[7], noContactBtns, resultList, deployPlace);
-        setupResultButtonHandlers(results[10], declineBtns, resultList, deployPlace);
+        handleHotClick(results[7], noContactBtns, resultList, deployPlace);
+        handleHotClick(results[10], declineBtns, resultList, deployPlace);
     } catch (error) {
         console.error("Error replacing buttons:", error);
     }
 }
 
-function setupResultButtonHandlers(resultButton, hotBtns, resultList, deployPlace) {
+function handleHotClick(resultButton, hotBtns, resultList, deployPlace) {
     let btnsDeployed = false;
 
     resultButton.onclick = () => {
@@ -174,7 +174,6 @@ function waitAndClickCallBtn(iteration = 0) {
                 waitAndClickCallBtn(iteration++);
             } else {
                 callBtn.click();
-                console.log("Manualy CLIKCEDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
             }
         }, 40)
     }
@@ -183,67 +182,35 @@ function waitAndClickCallBtn(iteration = 0) {
 //#endregion
 
 
-function initPort() {
-    const port = chrome.runtime.connect({name: "content-background-connection"});
-
-    port.onMessage.addListener((msg) => {
-        switch (msg.message) {
-            case "call-end":
-                onCallEnd();
-                break;
-            default:
-                console.warn('Unknown payload:', msg.message);
-        }
-    });
-}
-function initMutationObserver() {
-    let btnsNeedReplace = true;
-    new MutationObserver(async () => {
-        if (document.getElementsByClassName("lead-edit").length !== 0
-            && document.getElementsByTagName("iframe").length === 0) {
-            findScenario();
-        }
-
-        const scenarioResults = document.getElementsByClassName("scenario-results");
-        if (scenarioResults.length === 0) {
-            btnsNeedReplace = true;
-        } else if (btnsNeedReplace) {
-            btnsNeedReplace = false;
-            await replaceButtons();
-        }
-
-        const saveBtn = document.querySelector(".save-and-next");
-        if (saveBtn && !saveBtn.classList.contains("save-handled")) {
-            saveBtn.classList.add("save-handled");
-            saveBtn.addEventListener("click", handleSave, {once: true});
-        }
-
-        const callBtn = document.getElementById("call_button");
-        const callCard = document.getElementById("call-card");
-        if (callBtn != null && !callCard.classList.contains("call-ended-manually")) {
-            callBtn.addEventListener("click", () => callCard.classList.add("auto-recall-disabled"));
-        }
-    }).observe(document, {childList: true, subtree: true});
-}
-
-initPort();
-initMutationObserver();
-
-async function handleSave() {
-    const callBtn = document.getElementById("call_button");
-    if (callBtn.innerHTML !== "Завершить") {
-        const resultList = document.querySelector(".result-list");
-        const inputs = resultList.querySelectorAll("input");
-
-        for (const input of inputs) {
-            if (input.checked) {
-                if (["492976", "492973", "492978"].includes(input.value)) {
-                    await chrome.runtime.sendMessage({action: "add-dialog"});
-                } else if (input.value === "492968") {
-                    await chrome.runtime.sendMessage({action: "add-lead"});
-                }
-                break;
-            }
-        }
+let btnsNeedReplace = true;
+new MutationObserver(async () => {
+    if (document.getElementsByClassName("lead-edit").length !== 0
+        && document.getElementsByTagName("iframe").length === 0) {
+        findScenario();
     }
-}
+
+    const scenarioResults = document.getElementsByClassName("scenario-results");
+
+    if (scenarioResults.length === 0) {
+        btnsNeedReplace = true;
+    } else if (btnsNeedReplace) {
+        btnsNeedReplace = false;
+        await replaceBtns();
+    }
+
+    const callBtn = document.getElementById("call_button");
+    const callCard = document.getElementById("call-card");
+
+    if (callBtn && !callCard.classList.contains("call-ended-manually")) {
+        callBtn.addEventListener("click", () => callCard.classList.add("auto-recall-disabled"));
+    }
+}).observe(document, {childList: true, subtree: true});
+chrome.runtime.connect().onMessage.addListener((msg) => {
+    switch (msg.message) {
+        case "call-end":
+            onCallEnd();
+            break;
+        default:
+            console.warn('Unknown payload:', msg.message);
+    }
+});
