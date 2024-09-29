@@ -171,11 +171,10 @@ new MutationObserver(async () => {
 }).observe(document, {childList: true, subtree: true});
 
 window.addEventListener("call:ended", (e) => {
-    console.log(e.detail)
 
     chrome.runtime.sendMessage({action: "get-setting", settingName: "auto-recall"}).then(autoRecall => {
-        if (autoRecall && e.detail.in && e.detail.duration < 3) {
-            document.getElementById("call_button").click();
+        if (autoRecall && e.detail.in && e.detail.duration < 4) {
+            clickCallBtn();
         }
     });
 })
