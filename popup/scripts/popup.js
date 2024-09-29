@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         action: "get-stats",
         timestamp: new Date().setHours(0),
     });
-    console.log(stats);
     updateCounters();
 
     document.getElementsByClassName("multi-switch")[0].addEventListener("switched", async (e) => {
@@ -33,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
                 break;
         }
-        console.log(stats);
         updateCounters();
     });
 });

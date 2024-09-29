@@ -92,7 +92,6 @@ class Database {
                 lastNormalStart = null;
             }
         });
-        console.log(timeOfWork);
 
         return Math.round(((timeOfWork / (1000 * 60 * 60)) % 24) * 10) / 10;
     }
@@ -112,7 +111,6 @@ class Database {
         try {
             const store = await (await this.open()).transaction('settings', 'readwrite').store;
             store.put({name: name, value: value});
-            console.log(await store.getAll());
         } catch (error) {
             console.error('Failed to set setting:', error);
         }

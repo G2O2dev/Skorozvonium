@@ -8,7 +8,7 @@ function listenTube() {
                         in: e.attributes.direction === "in",
                     }
                 }));
-                console.log("State end handled from injected", e)
+                console.log("call:ended handled from injected", e)
             });
         } catch {
             listenTube();
