@@ -10,12 +10,30 @@ function setNativeValue(element, value) {
     }
 }
 
+function endCall() {
+    const callBtn = document.getElementById("call_button");
+
+    if (callBtn.classList.contains("button__danger")) {
+        callBtn.click();
+    }
+}
+
+function fillComment(commentArea, word) {
+    setNativeValue(commentArea, word);
+    commentArea.dispatchEvent(new Event('input', {bubbles: true}));
+}
+
+function saveDialog() {
+    const saveBtn = document.querySelector(".save-and-next");
+
+    setTimeout(() => saveBtn.click(), 50);
+}
+
 //#region Scenario
 
 function createSheet(link) {
     const iframe = document.createElement("iframe");
     iframe.src = link;
-    iframe.loading = "eager";
 
     chrome.runtime.sendMessage({action: "get-setting", settingName: "hide-script-header"}).then(hideHeader => {
         if (hideHeader) {
@@ -60,82 +78,62 @@ function loadScenario(link) {
 
 //#region Buttons
 
-function createHotBtns(commentArea, words) {
+function createHotBtns(resultList, commentArea, words) {
     const wrapper = document.createElement("div");
-    wrapper.className = "grid-x grid-padding-x e-hot-list";
+    wrapper.className = "grid-x grid-padding-x e-hot-list e-none";
 
-    words.forEach(word => {
-        const item = document.createElement("div");
-        item.innerHTML = word;
-        item.onclick = () => handleHotBtnClick(commentArea, word);
-        wrapper.appendChild(item);
-    });
+    words.unshift("Назад");
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
 
-    const backButton = createBackBtn(wrapper);
-    wrapper.appendChild(backButton);
+        const btn = document.createElement("div");
+        btn.textContent = word;
+
+        if (i === 0) {
+            btn.onclick = () => {
+                wrapper.classList.add("e-none");
+                resultList.classList.remove("e-none");
+            };
+        } else {
+            btn.onclick = () => {
+                endCall();
+                fillComment(commentArea, word);
+                saveDialog();
+            };
+        }
+
+        wrapper.appendChild(btn);
+    }
 
     return wrapper;
 }
 
-function createBackBtn(wrapper) {
-    const backButton = document.createElement("div");
-    backButton.innerHTML = "Назад";
-    backButton.style.order = "-2";
-    backButton.style.background = "#373737";
-    backButton.style.color = "#f0f0f0";
-
-    backButton.onclick = () => {
-        wrapper.classList.add("e-none");
-        document.getElementsByClassName("result-list")[0].classList.remove("e-none");
-    };
-
-    return backButton;
-}
-
-function handleHotBtnClick(commentArea, word) {
-    const callBtn = document.getElementById("call_button");
-    const saveBtn = document.getElementsByClassName("save-and-next")[0];
-
-    if (callBtn.innerHTML === "Завершить") {
-        callBtn.click();
-    }
-
-    setNativeValue(commentArea, word);
-    commentArea.dispatchEvent(new Event('input', {bubbles: true}));
-
-    setTimeout(() => saveBtn.click(), 50);
-}
-
-function replaceBtns() {
+function deployHotBtns() {
     try {
         const resultList = document.querySelector(".result-list");
-        const results = resultList.querySelectorAll(".result-item");
-        const commentArea = document.querySelector(".voice-record-textarea textarea");
+        if (resultList == null)
+            return;
+
         const deployPlace = resultList.parentElement;
+        const commentArea = document.querySelector(".voice-record-textarea textarea");
 
-        let noContactBtns = createHotBtns(commentArea, ["Автоответчик", "Сброс", "Молчит", "Тишина"]);
-        let declineBtns = createHotBtns(commentArea, ["Не актуально", "Сброс", "Негатив"]);
+        let noContactBtns = createHotBtns(resultList, commentArea, ["Автоответчик", "Сброс", "Молчит", "Тишина"]);
+        let declineBtns = createHotBtns(resultList, commentArea, ["Не актуально", "Сброс", "Негатив"]);
 
-        handleHotClick(results[7], noContactBtns, resultList, deployPlace);
-        handleHotClick(results[10], declineBtns, resultList, deployPlace);
+        deployPlace.appendChild(noContactBtns);
+        deployPlace.appendChild(declineBtns);
+
+        resultList.querySelector('[value="492969"]').addEventListener("click", (e) => {
+            resultList.classList.toggle("e-none");
+            noContactBtns.classList.toggle("e-none");
+        });
+        resultList.querySelector('[value="492976"]').addEventListener("click", (e) => {
+            resultList.classList.toggle("e-none");
+            declineBtns.classList.toggle("e-none");
+        });
     } catch (error) {
         console.error("Error replacing buttons:", error);
     }
-}
-
-function handleHotClick(resultButton, hotBtns, resultList, deployPlace) {
-    let btnsDeployed = false;
-
-    resultButton.onclick = () => {
-        if (btnsDeployed) {
-            hotBtns.classList.remove("e-none");
-            resultList.classList.add("e-none");
-        } else {
-            deployPlace.appendChild(hotBtns);
-            resultList.classList.add("e-none");
-            btnsDeployed = true;
-        }
-    };
 }
 
 //#endregion
@@ -154,24 +152,19 @@ function clickCallBtn(iteration = 0) {
 }
 
 
-let btnsNeedReplace = true;
 new MutationObserver(async () => {
-    if (document.getElementsByClassName("lead-edit").length !== 0
-        && document.getElementsByTagName("iframe").length === 0) {
-        findScenario();
-    }
+    if (document.getElementsByClassName("lead-edit").length === 0)
+        return
 
-    const scenarioResults = document.getElementsByClassName("scenario-results");
-    if (scenarioResults.length === 0) {
-        btnsNeedReplace = true;
-    } else if (btnsNeedReplace) {
-        btnsNeedReplace = false;
-        await replaceBtns();
+    if (document.getElementsByTagName("iframe").length === 0)
+        findScenario();
+
+    if (document.getElementsByClassName("e-hot-list").length === 0) {
+        await deployHotBtns();
     }
 }).observe(document, {childList: true, subtree: true});
 
 window.addEventListener("call:ended", (e) => {
-
     chrome.runtime.sendMessage({action: "get-setting", settingName: "auto-recall"}).then(autoRecall => {
         if (autoRecall && e.detail.in && e.detail.duration < 4) {
             clickCallBtn();

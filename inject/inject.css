@@ -5,14 +5,7 @@
   grid-template-columns: repeat(5, 1fr) !important;
   height: 60px !important;
 }
-.result-list div:nth-child(2),
-.result-list div:nth-child(3),
-.result-list div:nth-child(4),
-.result-list div:nth-child(5),
-.result-list div:nth-child(6),
-.result-list div:nth-child(9),
-.result-list div:nth-child(10),
-.result-list div:nth-child(12) {
+.result-list > :not(div:has(input[value="492968"], input[value="492973"], input[value="492969"], input[value="492976"], input[value="492978"])) {
   display: none !important;
 }
 .result-list > .result-item {
@@ -104,6 +97,7 @@
   margin: 0 !important;
   background: cornflowerblue;
   overflow: hidden;
+  user-select: none;
 }
 .e-hot-list > div {
   display: flex !important;
@@ -112,18 +106,18 @@
   text-align: center;
   height: 60px;
   width: 100%;
-  user-select: none;
-}
-.e-hot-list div:nth-child(0) {
-  background: burlywood;
 }
 .e-hot-list div:nth-child(1) {
-  background: bisque;
+  background: #373737;
+  color: #f0f0f0;
 }
 .e-hot-list div:nth-child(2) {
-  background: lightsteelblue;
+  background: bisque;
 }
 .e-hot-list div:nth-child(3) {
+  background: lightsteelblue;
+}
+.e-hot-list div:nth-child(4) {
   background: lightcoral;
 }
 
