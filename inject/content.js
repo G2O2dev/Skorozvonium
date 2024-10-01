@@ -138,36 +138,30 @@ function deployHotBtns() {
 
 //#endregion
 
-function clickCallBtn(iteration = 0) {
-    if (iteration < 6) {
-        setTimeout(() => {
-            let callBtn = document.getElementById("call_button");
-            if (!callBtn.classList.contains("button__primary")) {
-                clickCallBtn(iteration++);
-            } else {
-                callBtn.click();
-            }
-        }, 40)
-    }
-}
-
-
 new MutationObserver(async () => {
-    if (document.getElementsByClassName("lead-edit").length === 0)
+    const callCard = document.getElementById("call-card");
+    const callBtn = document.getElementById("call_button");
+
+    if (!callCard || document.getElementsByClassName("lead-edit").length === 0)
         return
 
     if (document.getElementsByTagName("iframe").length === 0)
         findScenario();
 
-    if (document.getElementsByClassName("e-hot-list").length === 0) {
+    if (document.getElementsByClassName("e-hot-list").length === 0)
         await deployHotBtns();
-    }
+
+    if (callBtn != null)
+        callBtn.addEventListener("click", () => callCard.classList.add("call-ended-manually"));
 }).observe(document, {childList: true, subtree: true});
 
-window.addEventListener("call:ended", (e) => {
+window.addEventListener("skorozvonium:call-ended", (e) => {
+    console.log(e.detail)
     chrome.runtime.sendMessage({action: "get-setting", settingName: "auto-recall"}).then(autoRecall => {
-        if (autoRecall && e.detail.in && e.detail.duration < 4) {
-            clickCallBtn();
+        const callCard = document.getElementById("call-card");
+
+        if (autoRecall && e.detail.in && e.detail.duration <= 3.5 && !callCard?.classList.contains("call-ended-manually")) {
+            window.dispatchEvent(new CustomEvent("skorozvonium:call"));
         }
     });
 })
